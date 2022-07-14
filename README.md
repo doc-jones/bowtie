@@ -14,8 +14,8 @@ Also because it's elegant – we hope.
 
 In general, executing `bowtie` consists of providing 2 pieces of input:
 
-    * The names of one or more supported implementations to execute
-    * One or more test cases to run against these implementations (schemas, instances and optionally, expected validation results)
+* The names of one or more supported implementations to execute
+* One or more test cases to run against these implementations (schemas, instances and optionally, expected validation results)
 
 Given these, `bowtie` will report on the result of executing each implementation against the input schema/instance pairs.
 If expected results are provided, it will compare the results produced against the expected ones, reporting on any implementations which differ from the expected output.
@@ -24,12 +24,23 @@ If expected results are provided, it will compare the results produced against t
 
 A sample invocation of the CLI is:
 
-    $ printf
+```sh
+$ bowtie --all <<EOF
+{
+    "description": "stuff",
+    "schema": {},
+    "tests": [{"description": "a test", "instance": {"foo": "bar"}}]
+}
+EOF
+{"valid": true}
+```
 
-(FIXME)
+(TODO)
 
 ## Uses
 
 A key use of `bowtie` is in executing as input the [official test suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) and comparing the results produced by implementations to the expected ones from the suite.
 
 ## Adding an Implementation
+
+(TODO)
