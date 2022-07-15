@@ -41,6 +41,8 @@ EOF
 
 A key use of `bowtie` is in executing as input the [official test suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) and comparing the results produced by implementations to the expected ones from the suite.
 
+Of course one isn't limited to just the test cases in the test suite, as `bowtie` can be used to compare the validation results of any input across its supported implementations.
+
 ## Adding an Implementation
 
 (TODO)
