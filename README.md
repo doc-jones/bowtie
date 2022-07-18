@@ -26,11 +26,7 @@ A sample invocation of the CLI is:
 
 ```sh
 $ bowtie --all <<EOF
-{
-    "description": "stuff",
-    "schema": {},
-    "tests": [{"description": "a test", "instance": {"foo": "bar"}}]
-}
+{"description": "stuff", "schema": {}, "tests": [{"description": "a test", "instance": {"foo": "bar"}}] }
 EOF
 {"valid": true}
 ```

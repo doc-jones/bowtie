@@ -7,7 +7,7 @@
         "cases": {
             "description": "A line-delimited string of JSON objects which satisfy the `case` schema. Cases will be written one by one to standard input of each implementation under test.",
             "type": "string",
-            "jsonl": {"$ref": "#/$defs/case"}
+            "jsonseq": {"$ref": "#/$defs/case"}
         },
         "case": {
             "description": "An individual test case, consisting of a single schema and one or more instances to validate under it",
@@ -39,7 +39,7 @@
             "description": "A single test",
 
             "type": "object",
-            "required": [ "description", "data" ],
+            "required": [ "description", "instance" ],
             "properties": {
                 "description": {
                     "description": "The test description, briefly explaining which behavior it exercises",
@@ -49,7 +49,7 @@
                     "description": "Any additional comments about the test",
                     "type": "string"
                 },
-                "data": {
+                "instance": {
                     "description": "The instance which should be validated against the schema in \"schema\"."
                 },
                 "valid": {
