@@ -25,7 +25,7 @@ If expected results are provided, it will compare the results produced against t
 A sample invocation of the CLI is:
 
 ```sh
-$ bowtie --all <<EOF
+$ bowtie run --all <<EOF
 {"description": "stuff", "schema": {}, "tests": [{"description": "a test", "instance": {"foo": "bar"}}] }
 EOF
 {"valid": true}
