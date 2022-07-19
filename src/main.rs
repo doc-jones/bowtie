@@ -1,9 +1,13 @@
 use std::io;
 
-use bollard::{container::Config, models::HostConfig, Docker};
+use bollard::{
+    container::{Config, StartContainerOptions},
+    models::HostConfig,
+    Docker,
+};
 use clap::{Parser, Subcommand};
-use futures::future;
-use serde_json::Result;
+use futures::future::join_all;
+use serde_json;
 
 mod lib;
 use crate::lib::Case;
@@ -44,29 +48,15 @@ fn show_schema() -> () {
 }
 
 #[tokio::main]
-async fn run(implementations: Vec<String>) -> Result<()> {
+async fn run(implementations: Vec<String>) -> serde_json::Result<()> {
     let docker = Docker::connect_with_local_defaults().unwrap();
-
-    let host_config = HostConfig {
-        auto_remove: Some(true),
-        ..Default::default()
-    };
 
     let tasks = implementations
         .iter()
-        .map(|image| {
-            docker.create_container::<&str, &str>(
-                None,
-                Config {
-                    image: Some(image),
-                    host_config: Some(host_config.to_owned()),
-                    ..Default::default()
-                },
-            )
-        })
+        .map(|image| temporary_container(&docker, &image))
         .collect::<Vec<_>>();
-    for each in future::join_all(tasks).await {
-        println!("Container: {}", each.expect("Couldn't start!").id);
+    for each in join_all(tasks).await {
+        println!("Container: {}", each.expect("Couldn't start!"));
     }
 
     for line in io::stdin().lines() {
@@ -74,6 +64,28 @@ async fn run(implementations: Vec<String>) -> Result<()> {
         run_case(&case, &implementations);
     }
     Ok(())
+}
+
+async fn temporary_container(
+    docker: &bollard::Docker,
+    image: &str,
+) -> Result<String, bollard::errors::Error> {
+    let config = Config {
+        image: Some(image),
+        host_config: Some(HostConfig {
+            auto_remove: Some(true),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let id = docker
+        .create_container::<&str, &str>(None, config)
+        .await?
+        .id;
+    let _ = docker
+        .start_container(&id, None::<StartContainerOptions<String>>)
+        .await;
+    Ok(id)
 }
 
 fn run_case(case: &Case, implementations: &Vec<String>) {
