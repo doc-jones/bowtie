@@ -6,7 +6,6 @@ use serde_json::Result;
 mod lib;
 use crate::lib::Case;
 
-
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
@@ -27,7 +26,6 @@ enum Commands {
     /// Dump the schema used for communicating with bowtie
     ShowSchema {},
 }
-
 
 fn main() {
     let cli = Cli::parse();
@@ -62,11 +60,7 @@ fn run_case(case: Case) {
         };
         println!(
             "{} > {}: {} / {}{}",
-            case.description,
-            test.description,
-            case.schema,
-            test.instance,
-            valid,
+            case.description, test.description, case.schema, test.instance, valid,
         );
     }
 }
