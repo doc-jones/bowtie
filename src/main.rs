@@ -1,6 +1,8 @@
 use std::io;
 
+use bollard::{container::Config, models::HostConfig, Docker};
 use clap::{Parser, Subcommand};
+use futures::future;
 use serde_json::Result;
 
 mod lib;
@@ -18,9 +20,9 @@ struct Cli {
 enum Commands {
     /// Run bowtie on some provided test cases
     Run {
-        /// Run all known implementations
+        /// One or more JSON Schema implementations to run under bowtie.
         #[clap(short, long, action)]
-        all: bool,
+        implementations: Vec<String>,
     },
 
     /// Dump the schema used for communicating with bowtie
@@ -32,7 +34,7 @@ fn main() {
 
     match &cli.command {
         Commands::ShowSchema {} => show_schema(),
-        Commands::Run { all: _ } => run().expect("Failed to run!"),
+        Commands::Run { implementations } => run(implementations.to_vec()).expect("Failed to run!"),
     };
 }
 
@@ -42,25 +44,53 @@ fn show_schema() -> () {
 }
 
 #[tokio::main]
-async fn run() -> Result<()> {
-    let lines = io::stdin().lines();
-    for line in lines {
+async fn run(implementations: Vec<String>) -> Result<()> {
+    let docker = Docker::connect_with_local_defaults().unwrap();
+
+    let host_config = HostConfig {
+        auto_remove: Some(true),
+        ..Default::default()
+    };
+
+    let tasks = implementations
+        .iter()
+        .map(|image| {
+            docker.create_container::<&str, &str>(
+                None,
+                Config {
+                    image: Some(image),
+                    host_config: Some(host_config.to_owned()),
+                    ..Default::default()
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+    for each in future::join_all(tasks).await {
+        println!("Container: {}", each.expect("Couldn't start!").id);
+    }
+
+    for line in io::stdin().lines() {
         let case: Case = serde_json::from_str(&line.unwrap())?;
-        run_case(case);
+        run_case(&case, &implementations);
     }
     Ok(())
 }
 
-fn run_case(case: Case) {
-    for test in case.tests {
-        let valid = match test.valid {
+fn run_case(case: &Case, implementations: &Vec<String>) {
+    for test in &case.tests {
+        let expected = match test.valid {
             Some(true) => format!(" (valid)"),
             Some(false) => format!(" (invalid)"),
             None => format!(""),
         };
+        let results = implementations
+            .iter()
+            .map(|_| "valid")
+            .collect::<Vec<_>>()
+            .join(", ");
         println!(
-            "{} > {}: {} / {}{}",
-            case.description, test.description, case.schema, test.instance, valid,
+            "{} > {}: {} / {}{} – {}",
+            case.description, test.description, case.schema, test.instance, expected, results,
         );
     }
 }
