@@ -14,8 +14,22 @@ repos:
   - id: markdownlint
     args: ["-r", "~MD013"]
 
--   repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
-    hooks:
-    -   id: fmt
-    -   id: cargo-check
+- repo: local
+  hooks:
+  - id: cargo-fmt
+    name: cargo fmt
+    description: "Format the package using cargo fmt"
+    language: rust
+    types: [rust]
+    entry: cargo fmt
+    args: ["--"]
+
+- repo: local
+  hooks:
+  - id: cargo-check
+    name: cargo check
+    description: "Check the package for errors using cargo check."
+    language: rust
+    types: [rust]
+    entry: cargo check
+    pass_filenames: false
