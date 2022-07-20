@@ -1,7 +1,7 @@
 use std::io;
 
 use bollard::{
-    container::{Config, RemoveContainerOptions, StartContainerOptions},
+    container::{AttachContainerOptions, Config, RemoveContainerOptions, StartContainerOptions},
     models::HostConfig,
     Docker,
 };
@@ -55,17 +55,36 @@ async fn run(implementations: Vec<String>) -> serde_json::Result<()> {
         .iter()
         .map(|image| temporary_container(&docker, &image))
         .collect();
-    let containers = join_all(tasks).await;
-    for id in &containers {
-        println!("Container: {}", id.as_ref().expect("Couldn't start!"));
-    }
+    let done_starting = join_all(tasks).await;
+    let containers: Vec<_> = done_starting
+        .iter()
+        .map(|id| id.as_ref().expect("Couldn't start!"))
+        .collect();
+
+    let done_attaching = join_all(containers.iter().map(|id| {
+        docker.attach_container(
+            id,
+            Some(AttachContainerOptions::<String> {
+                stdin: Some(true),
+                stdout: Some(true),
+                ..Default::default()
+            }),
+        )
+    }))
+    .await;
+    let handles: Vec<_> = done_attaching
+        .iter()
+        .map(|result| result.as_ref().expect("Couldn't attach!"))
+        .collect();
+
     for line in io::stdin().lines() {
         let case: Case = serde_json::from_str(&line.unwrap())?;
+        for _attached in &handles {}
         let _result = case.run(&implementations);
     }
     join_all(containers.iter().map(|id| {
         docker.remove_container(
-            id.as_ref().expect("Couldn't stop!"),
+            id.as_ref(),
             Some(RemoveContainerOptions {
                 force: true,
                 ..Default::default()
