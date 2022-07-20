@@ -23,13 +23,3 @@ repos:
     types: [rust]
     entry: cargo fmt
     args: ["--"]
-
-- repo: local
-  hooks:
-  - id: cargo-check
-    name: cargo check
-    description: "Check the package for errors using cargo check."
-    language: rust
-    types: [rust]
-    entry: cargo check
-    pass_filenames: false
