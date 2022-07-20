@@ -51,17 +51,17 @@ fn show_schema() -> () {
 async fn run(implementations: Vec<String>) -> serde_json::Result<()> {
     let docker = Docker::connect_with_local_defaults().unwrap();
 
-    let tasks = implementations
+    let tasks: Vec<_> = implementations
         .iter()
         .map(|image| temporary_container(&docker, &image))
-        .collect::<Vec<_>>();
+        .collect();
     let containers = join_all(tasks).await;
     for id in &containers {
         println!("Container: {}", id.as_ref().expect("Couldn't start!"));
     }
     for line in io::stdin().lines() {
         let case: Case = serde_json::from_str(&line.unwrap())?;
-        run_case(&case, &implementations);
+        let _result = case.run(&implementations);
     }
     join_all(containers.iter().map(|id| {
         docker.remove_container(
@@ -96,23 +96,4 @@ async fn temporary_container(
         .start_container(&id, None::<StartContainerOptions<String>>)
         .await;
     Ok(id)
-}
-
-fn run_case(case: &Case, implementations: &Vec<String>) {
-    for test in &case.tests {
-        let expected = match test.valid {
-            Some(true) => format!(" (valid)"),
-            Some(false) => format!(" (invalid)"),
-            None => format!(""),
-        };
-        let results = implementations
-            .iter()
-            .map(|_| "valid")
-            .collect::<Vec<_>>()
-            .join(", ");
-        println!(
-            "{} > {}: {} / {}{} – {}",
-            case.description, test.description, case.schema, test.instance, expected, results,
-        );
-    }
 }
