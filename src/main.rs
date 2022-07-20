@@ -1,7 +1,7 @@
 use std::io;
 
 use bollard::{
-    container::{Config, StartContainerOptions},
+    container::{Config, RemoveContainerOptions, StartContainerOptions},
     models::HostConfig,
     Docker,
 };
@@ -55,14 +55,24 @@ async fn run(implementations: Vec<String>) -> serde_json::Result<()> {
         .iter()
         .map(|image| temporary_container(&docker, &image))
         .collect::<Vec<_>>();
-    for each in join_all(tasks).await {
-        println!("Container: {}", each.expect("Couldn't start!"));
+    let containers = join_all(tasks).await;
+    for id in &containers {
+        println!("Container: {}", id.as_ref().expect("Couldn't start!"));
     }
-
     for line in io::stdin().lines() {
         let case: Case = serde_json::from_str(&line.unwrap())?;
         run_case(&case, &implementations);
     }
+    join_all(containers.iter().map(|id| {
+        docker.remove_container(
+            id.as_ref().expect("Couldn't stop!"),
+            Some(RemoveContainerOptions {
+                force: true,
+                ..Default::default()
+            }),
+        )
+    }))
+    .await;
     Ok(())
 }
 
