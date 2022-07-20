@@ -37,18 +37,27 @@ impl Test {
             Some(false) => format!(" (invalid)"),
             None => format!(""),
         };
-        let results = implementations
-            .iter()
-            .map(|_| "valid")
-            .collect::<Vec<_>>()
-            .join(", ");
+        let results_by_id = HashMap::from_iter(
+            implementations
+                .iter()
+                .map(|name| (name.to_owned(), ImplementationTestResult { valid: true })),
+        );
+        // TODO: When table-ified, preserve order (values() is arbitrary).
+        let display = results_by_id
+            .values()
+            .map(|result| if result.valid { "valid" } else { "invalid" });
         println!(
             "{} > {}: {} / {}{} – {}",
-            case.description, self.description, case.schema, self.instance, expected, results,
+            case.description,
+            self.description,
+            case.schema,
+            self.instance,
+            expected,
+            display.collect::<Vec<_>>().join(", "),
         );
         TestResults {
             // test: self,
-            implementations: HashMap::from([]),
+            implementations: results_by_id,
         }
     }
 }
