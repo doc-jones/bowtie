@@ -82,6 +82,9 @@ async fn temporary_container(
 ) -> Result<String, bollard::errors::Error> {
     let config = Config {
         image: Some(image),
+        attach_stdin: Some(true),
+        attach_stdout: Some(true),
+        open_stdin: Some(true),
         host_config: Some(HostConfig {
             auto_remove: Some(true),
             ..Default::default()
