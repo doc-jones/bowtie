@@ -1,13 +1,17 @@
 use std::io;
 
 use bollard::{
-    container::{AttachContainerOptions, Config, RemoveContainerOptions, StartContainerOptions},
+    container::{
+        AttachContainerOptions, AttachContainerResults, Config, RemoveContainerOptions,
+        StartContainerOptions,
+    },
     models::HostConfig,
     Docker,
 };
 use clap::{Parser, Subcommand};
 use futures::future::join_all;
 use serde_json;
+use tokio::{spawn, sync::broadcast};
 
 mod lib;
 use crate::lib::Case;
@@ -61,25 +65,36 @@ async fn run(implementations: Vec<String>) -> serde_json::Result<()> {
         .map(|id| id.as_ref().expect("Couldn't start!"))
         .collect();
 
-    let done_attaching = join_all(containers.iter().map(|id| {
-        docker.attach_container(
-            id,
-            Some(AttachContainerOptions::<String> {
-                stdin: Some(true),
-                stdout: Some(true),
-                ..Default::default()
-            }),
-        )
-    }))
-    .await;
-    let handles: Vec<_> = done_attaching
-        .iter()
-        .map(|result| result.as_ref().expect("Couldn't attach!"))
-        .collect();
+    let mut channels = Vec::with_capacity(containers.len());
+    for id in containers.iter() {
+        let (tx, mut rx) = broadcast::channel::<&Case>(16);
+        spawn(async move {
+            let result = &docker
+                .attach_container(
+                    id,
+                    Some(AttachContainerOptions::<String> {
+                        stdin: Some(true),
+                        stdout: Some(true),
+                        ..Default::default()
+                    }),
+                )
+                .await;
+            let AttachContainerResults { output, input } = result.expect("asdf");
+            loop {
+                let case = rx.recv().await.unwrap();
+                println!("{}", case.description);
+                // input.write_all(case);
+            }
+        });
+        channels.push((tx, rx));
+    }
 
-    for line in io::stdin().lines() {
-        let case: Case = serde_json::from_str(&line.unwrap())?;
-        for _attached in &handles {}
+    for each in io::stdin().lines() {
+        let line = each.unwrap();
+        let case: Case = serde_json::from_str(&line)?;
+        for (tx, _) in channels {
+            tx.send(&case);
+        }
         let _result = case.run(&implementations);
     }
     join_all(containers.iter().map(|id| {
